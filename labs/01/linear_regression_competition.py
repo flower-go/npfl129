@@ -2,6 +2,13 @@
 import argparse
 import pickle
 
+import sklearn as sklearn
+import sklearn.linear_model
+import math
+from sklearn.metrics import mean_squared_error
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import cross_val_score
+
 import numpy as np
 
 parser = argparse.ArgumentParser()
@@ -18,15 +25,25 @@ if __name__ == "__main__":
     train = np.load("linear_regression_competition.train.npz")
     train = {entry: train[entry] for entry in train}
 
+    #for i in range(12):
+    #   train['data'] = np.concatenate((train['data'],train['data'][:,i].reshape(len(train['data']),1)**2), axis = 1)
+    #print(train['data'].shape)
+
     # TODO: Train the model
+    model = RandomForestRegressor(max_depth=10, random_state=args.seed,n_estimators=100000)
+    #model = model.fit(train['data'], train['target'])
+
+    #model = sklearn.linear_model.Ridge(alpha=1)
+        #.fit(train['data'], train['target'])
+    print(np.sqrt(-1*cross_val_score(model, train['data'], train['target'], cv=10, scoring='neg_mean_squared_error')))
 
     # TODO: The trained model needs to be saved. All sklear models can
     # be serialized and deserialized using the standard `pickle` module.
     #
     # To save a model, open a target file for binary access, and use
     # `pickle.dump` to save the model to the opened file:
-    # with open(args.model_path, "wb") as model_file:
-    #       pickle.dump(model, model_file)
+    with open(args.model_path, "wb") as model_file:
+          pickle.dump(model, model_file)
 
 # The `recodex_predict` is called during ReCodEx evaluation (there can be
 # several Python sources in the submission, but exactly one should contain
@@ -41,7 +58,8 @@ def recodex_predict(data):
     # You should probably start by loading a model. Start by opening the model
     # file for binary read access and then use `pickle.load` to deserialize the
     # model from the stored binary data:
-    # with open(args.model_path, "rb") as model_file:
-    #     model = pickle.load(model_file)
+    with open('linear_regression_competition.model', "rb") as model_file:
+        model = pickle.load(model_file)
 
     # TODO: Return the predictions as a Numpy array.
+    return np.array(model.predict(data))

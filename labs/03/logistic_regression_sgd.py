@@ -7,6 +7,7 @@ import numpy as np
 import sklearn.datasets
 import sklearn.metrics
 import sklearn.model_selection
+from sklearn.metrics import accuracy_score
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -18,6 +19,29 @@ if __name__ == "__main__":
     parser.add_argument("--seed", default=42, type=int, help="Random seed")
     parser.add_argument("--test_ratio", default=0.5, type=float, help="Test set size ratio")
     args = parser.parse_args()
+
+
+    def sigmoid(z):
+        return 1.0 / (1 + np.exp(-z))
+    def sigmoid_array(a):
+        return [sigmoid(x) for x in a.dot(weights)]
+    def predict(d):
+        return [1 if p >= 0.5 else 0 for p in d]
+    def neg_log_likelihood(predictions, labels):
+        # Take the error when label=1
+        class1_cost = -labels * np.log(predictions)
+
+        # Take the error when label=0
+        class2_cost = (1 - np.array(labels)) * np.log(1 - np.array(predictions))
+
+        # Take the sum of both costs
+        cost = class1_cost - class2_cost
+
+        # Take the average cost
+        cost = cost.sum() / len(labels)
+
+        return cost
+
 
     # Set random seed
     np.random.seed(args.seed)
@@ -43,17 +67,39 @@ if __name__ == "__main__":
         # TODO: Process the data in the order of `permutation`.
         # For every `args.batch_size`, average their gradient, and update the weights.
         # You can assume that `args.batch_size` exactly divides `train_data.shape[0]`.
+        batches = [permutation[i:i + args.batch_size] for i in range(0, len(permutation), args.batch_size)]
+        for indices in batches:
+            x = train_data[indices]
+            t = train_target[indices]
+            gradients = []
+
+            for i in range(len(t)):
+                diff = (sigmoid(x[i].transpose().dot(weights)) - t[i])
+                gradients.append(diff * x[i])
+
+            weights = weights - args.learning_rate * np.mean(gradients, axis=0)
 
         # TODO: After the SGD iteration, measure the average loss and accuracy for both the
         # train test and the test set. The loss is the average MLE loss (i.e., the
         # negative log likelihood, or crossentropy loss, or KL loss) per example.
         # Print the accuracies in percentages.
+        train_sig = sigmoid_array(train_data)
+        test_sig = sigmoid_array(test_data)
+
+        prediction_train = predict(train_sig)
+        prediction_test = predict(test_sig)
+
+        train_loss = neg_log_likelihood(train_sig, train_target)
+        test_loss = neg_log_likelihood(test_sig, test_target)
+        test_accuracy = accuracy_score(test_target, prediction_test)
+        train_accuracy = accuracy_score(train_target, prediction_train)
+
         print("After iteration {}: train loss {:.4f} acc {:.1f}%, test loss {:.4f} acc {:.1f}%".format(
             iteration + 1,
-            # The average train loss,
-            100 * # Training accuracy,
-            # The average test loss,
-            100 * # Test accuracy,
+            train_loss,
+            100 * train_accuracy,
+            test_loss,
+            100 * test_accuracy,
         ))
 
         if args.plot:

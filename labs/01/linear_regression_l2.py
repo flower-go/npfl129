@@ -5,6 +5,8 @@ import numpy as np
 import sklearn.datasets
 import sklearn.linear_model
 import sklearn.model_selection
+import math
+from sklearn.metrics import mean_squared_error
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -19,6 +21,7 @@ if __name__ == "__main__":
     # TODO: Split the dataset randomly to train and test using
     # `sklearn.model_selection.train_test_split`, with
     # `test_size=args.test_size` and `random_state=args.seed`.
+    train, test, train_y, test_y = sklearn.model_selection.train_test_split(dataset.data, dataset.target, test_size=args.test_size,random_state=args.seed)
 
     # TODO: Using sklearn.linear_model.Ridge, fit the train set using
     # L2 regularization, employing lambdas from 0 to 100 with a step size 0.1
@@ -31,6 +34,15 @@ if __name__ == "__main__":
     # by sklear.metrics.)
     best_lambda = None
     best_rmse = None
+
+    for i in np.arange(0,100,0.1):
+        fitted = sklearn.linear_model.Ridge(alpha=i).fit(train, train_y)
+        prediction = fitted.predict(test)
+        rmse = math.sqrt(mean_squared_error(test_y,prediction))
+        if (best_rmse is None) or (rmse < best_rmse):
+            best_lambda = i
+            best_rmse = rmse
+
 
     with open("linear_regression_l2.out", "w") as output_file:
         print("{:.1f}, {:.2f}".format(best_lambda, best_rmse), file=output_file)

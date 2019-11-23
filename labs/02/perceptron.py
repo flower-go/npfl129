@@ -23,6 +23,7 @@ if __name__ == "__main__":
     target = 2 * target - 1
 
     # TODO: Append a constant feature with value 1 to the end of every input data
+    data = np.concatenate((data, np.ones(len(target)).reshape(len(target), 1)), axis=1)
 
     # Generate initial perceptron weights
     weights = np.random.uniform(size=data.shape[1])
@@ -43,5 +44,13 @@ if __name__ == "__main__":
         # to the `weights` for incorrectly classified examples.
         # If all training instances are correctly separated, set `done=True`,
         # otherwise set `done=False`.
+        #y = data.dot(weights)
+        done = True
+        for i in range(len(target)):
+            y = weights.transpose().dot(data[i])
+            if y*target[i] < 0:
+                weights = weights + target[i]*data[i]
+                done = False
+
 
     print(" ".join("{:.2f}".format(weight) for weight in weights))

@@ -9,6 +9,10 @@ import sklearn.metrics
 import sklearn.model_selection
 import sklearn.pipeline
 import sklearn.preprocessing
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import MinMaxScaler
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -30,9 +34,15 @@ if __name__ == "__main__":
 
     # TODO: Create a pipeline, which
     # 1. performs sklearn.preprocessing.MinMaxScaler()
+    min_max = sklearn.pipeline.Pipeline(steps=[
+        ('imputer', SimpleImputer()),
+        ('scaler', MinMaxScaler())])
     # 2. performs sklearn.preprocessing.PolynomialFeatures()
+    poly = sklearn.preprocessing.PolynomialFeatures()
     # 3. performs sklearn.linear_model.LogisticRegression(multi_class="multinomial", random_state=args.seed)
-    #
+    logistic = sklearn.linear_model.LogisticRegression(multi_class="multinomial", random_state=args.seed)
+
+    pipe = sklearn.pipeline.Pipeline(steps=[('min_max',min_max), ('poly',poly), ('logistic', logistic)])
     # Then, using sklearn.model_selection.StratifiedKFold(5), evaluate crossvalidated
     # train performance of all combinations of the the following parameters:
     # - polynomial degree: 1, 2
@@ -40,8 +50,17 @@ if __name__ == "__main__":
     # - LogisticRegression solver: lbfgs, sag
     #
     # For the best combination of parameters, compute the test set accuracy.
+    param_grid = {
+        'poly__degree': [1,2],
+        'logistic__C':[0.01,1,100],
+        'logistic__solver': ['lbfgs', 'sag']
+    }
+
+    search = GridSearchCV(pipe, param_grid, iid=False, cv=5)
+    search.fit(train_data, train_target)
     #
     # The easiest way is to use `sklearn.model_selection.GridSearchCV`.
+    best = search.best_estimator_
 
-    test_accuracy = ...
+    test_accuracy = accuracy_score(test_target, best.predict(test_data))
     print("{:.2f}".format(100 * test_accuracy))

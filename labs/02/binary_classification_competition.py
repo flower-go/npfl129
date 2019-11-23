@@ -6,8 +6,17 @@ import os
 import urllib.request
 import sys
 
-import numpy as np
 import pandas as pd
+import numpy as np
+import sklearn.compose
+import sklearn.datasets
+import sklearn.model_selection
+import sklearn.pipeline
+import sklearn.preprocessing
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import mean_squared_error
 
 class Dataset:
     def __init__(self,
@@ -42,6 +51,27 @@ if __name__ == "__main__":
     # strings are actually encoded as `object`s.
 
     # TODO: Train the model.
+    numeric_transformer = sklearn.pipeline.Pipeline(steps=[
+        ('imputer', SimpleImputer()),
+        ('scaler', StandardScaler(copy=False))])
+
+    categorical_transformer = sklearn.pipeline.Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='constant')),
+        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse=False))])
+    poly = sklearn.preprocessing.PolynomialFeatures(2, include_bias=False)
+
+    numerical = list(train.data.select_dtypes([np.number]).columns)
+    categorical = [x for x in train.data.columns if x not in numerical]
+
+
+
+    preprocessor = sklearn.compose.ColumnTransformer(
+        transformers=[
+            ('cat', categorical_transformer, categorical),
+            ('num', numeric_transformer, numerical)
+        ])
+    clf = sklearn.pipeline.Pipeline(steps=[('preprocessor', preprocessor), ('poly', poly),('pred', LinearRegression())])
+    train_data = clf.fit(train.data, train.target)
 
     # TODO: The trained model needs to be saved. All sklearn models can
     # be serialized and deserialized using the standard `pickle` module.
@@ -49,8 +79,8 @@ if __name__ == "__main__":
     #
     # To save a model, open a target file for binary access, and use
     # `pickle.dump` to save the model to the opened file:
-    # with lzma.open(args.model_path, "wb") as model_file:
-    #       pickle.dump(model, model_file)
+    with lzma.open(args.model_path, "wb") as model_file:
+          pickle.dump(clf, model_file)
 
 # The `recodex_predict` is called during ReCodEx evaluation (there can be
 # several Python sources in the submission, but exactly one should contain
@@ -65,7 +95,12 @@ def recodex_predict(data):
     # You should probably start by loading a model. Start by opening the model
     # file for binary read access and then use `pickle.load` to deserialize the
     # model from the stored binary data:
-    # with lzma.open(args.model_path, "rb") as model_file:
-    #     model = pickle.load(model_file)
+    with lzma.open(args.model_path, "rb") as model_file:
+        model = pickle.load(model_file)
 
     # TODO: Return the predictions as a Numpy array.
+    prediction = model.predict(data)
+    prediction = [1 if x > 0.5 else 0 for x in prediction]
+    return np.array(prediction)
+
+print(mean_squared_error(train.data,recodex_predict(train.data)))
