@@ -7,6 +7,43 @@ import numpy as np
 import sklearn.datasets
 import sklearn.metrics
 import sklearn.model_selection
+from sklearn.metrics import accuracy_score
+
+def softmax(z, label):
+    w = weights[:,label]
+    p = np.exp(z.transpose().dot(w))
+    suma = np.sum([np.exp(z.transpose().dot(weights[:,i])) for i in range(len(weights[0]))])
+    return p/suma
+
+def gradient(z, label):
+    num_classes = len(weights[0])
+    scores = np.zeros(num_classes)
+    for l in range(num_classes):
+        w = weights[:,l]
+        scores[l] = w.dot(z)
+    suma = np.sum(np.exp(scores))
+
+    percent_exp_score = np.exp(scores) / suma
+    for j in range(num_classes):
+        grad[:, j] += percent_exp_score[j] * z
+    grad[:, label] -= z
+
+    return grad
+
+def softmax_array(z):
+    result = []
+    for x in z:
+        row = []
+        for i in range(len(weights[0])):
+            row.append(softmax(x, i))
+        result.append(row)
+    return result
+
+
+def prediction(z):
+    z = np.array(z)
+    return z.argmax(axis=1)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -41,11 +78,35 @@ if __name__ == "__main__":
         # TODO: Process the data in the order of `permutation`.
         # For every `args.batch_size`, average their gradient, and update the weights.
         # You can assume that `args.batch_size` exactly divides `train_data.shape[0]`.
+        batches = [permutation[i:i + args.batch_size] for i in range(0, len(permutation), args.batch_size)]
+        for indices in batches:
+            x = train_data[indices]
+            t = train_target[indices]
+            grad = np.zeros_like(weights)
+
+            for i in range(len(t)):
+                gradient(x[i], t[i])
+
+            grad /= len(t)
+            weights -= args.learning_rate * grad
 
         # TODO: After the SGD iteration, measure the accuracy for both the
         # train test and the test set and print it in percentages.
+        train_soft = softmax_array(train_data)
+        test_soft = softmax_array(test_data)
+
+        prediction_train = prediction(train_soft)
+        prediction_test = prediction(test_soft)
+
+        train_accuracy = 0
+        test_accuracy = 0
+
+        test_accuracy = accuracy_score(test_target, prediction_test)
+        train_accuracy = accuracy_score(train_target, prediction_train)
+
+
         print("After iteration {}: train acc {:.1f}%, test acc {:.1f}%".format(
             iteration + 1,
-            100 * # Training accuracy,
-            100 * # Test accuracy,
+            100 * train_accuracy,
+            100 * test_accuracy,
         ))

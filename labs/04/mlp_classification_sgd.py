@@ -8,6 +8,20 @@ import sklearn.datasets
 import sklearn.metrics
 import sklearn.model_selection
 
+def softmax(z):
+    p = np.exp(z)
+    suma = np.sum(p)
+    return p / suma
+
+def relu_der(x):
+    return [1 if i > 0 else 0 for i in x]
+
+def relu_der_matrix(m):
+    result = np.zeros_like(m)
+    for i in range(m.shape[0]):
+            result[i,:] = relu_der(m[i])
+    return result
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", default=10, type=int, help="Batch size")
@@ -44,6 +58,14 @@ if __name__ == "__main__":
         # We assume a neural network with a single hidden layer of size `args.hidden_layer`
         # and ReLU activation, where ReLU(x) = max(x, 0), and an output layer with softmax
         # activation.
+
+        hidden = inputs.dot(weights[0])
+        hidden = np.maximum(hidden,0)
+
+        output = hidden.dot(weights[1])
+        output = softmax(output - np.max(output))
+
+        return output,hidden
         #
         # The value of the hidden layer is computed as ReLU(inputs times weights[0]).
         # The value of the output layer is computed as softmax(hidden_layer times weights[1]).
@@ -71,11 +93,41 @@ if __name__ == "__main__":
         # - compute the derivative with respect to the hidden layer output
         # - compute the derivative with respect to the hidden layer input
         # - compute the derivative with respect to weights[0]
+        batches = [permutation[i:i + args.batch_size] for i in range(0, len(permutation), args.batch_size)]
+        for indices in batches:
+            x = train_data[indices]
+            t = train_target[indices]
+            update1 = np.zeros_like(weights[1])
+            update0 = np.zeros_like(weights[0])
+            for i in range(len(t)):
+                o,h = forward(x[i])
+                dL_sinput = (o - [1 if j == t[i] else 0 for j in range(10)])
+                dLoss_dh_out = weights[1].dot(dL_sinput)
+                dH_out_H_in = h > 0
+                dH_in_wij = x[i].reshape([-1, 1])
+
+                update1 += np.outer(h,dL_sinput)
+                update0 += dLoss_dh_out*dH_out_H_in*dH_in_wij
+
+            update1 = update1/len(t)
+            update0 = update0/len(t)
+            weights[1] -= args.learning_rate * update1
+            weights[0] -= args.learning_rate * update0
 
         # TODO: After the SGD iteration, measure the accuracy for both the
         # train test and the test set and print it in percentages.
+        train_acc = 0
+        test_acc = 0
+
+        train_pred = [forward(inp)[0] for inp in train_data]
+        train_pred = [np.argmax(i) for i in train_pred]
+        test_pred = [forward(inp)[0] for inp in test_data]
+        test_pred = [np.argmax(i) for i in test_pred]
+
+        train_acc = sklearn.metrics.accuracy_score(train_target, train_pred)
+        test_acc = sklearn.metrics.accuracy_score(test_target, test_pred)
         print("After iteration {}: train acc {:.1f}%, test acc {:.1f}%".format(
             iteration + 1,
-            100 * # Training accuracy,
-            100 * # Test accuracy,
+            100 * train_acc,
+            100 * test_acc,
         ))
