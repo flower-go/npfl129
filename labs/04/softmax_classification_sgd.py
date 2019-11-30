@@ -39,7 +39,6 @@ def softmax_array(z):
         result.append(row)
     return result
 
-
 def prediction(z):
     z = np.array(z)
     return z.argmax(axis=1)

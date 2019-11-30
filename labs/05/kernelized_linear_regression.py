@@ -38,6 +38,8 @@ if __name__ == "__main__":
     #   y = phi(x)^T w + bias
     # and the loss in the primary problem is MSE with L2 regularization:
     #   L = sum_{i=1}^N [1/2 * (target_i - phi(x_i)^T w - bias)^2] + 1/2 * args.l2 * w^2
+    # Perform the update by optimizing this exact loss computed over
+    # all training data (so it is a full GD algorithm, no batches or sampling).
     #
     # For bias use explicitly the average of training targets, and do not update
     # it futher during training.
@@ -48,7 +50,8 @@ if __name__ == "__main__":
     # - poly: K(x, y; degree, gamma) = (gamma * x^T y + 1) ^ degree
     # - rbf: K(x, y; gamma) = exp^{- gamma * ||x - y||^2}
     #
-    # After each update print RMSE both on training and testing data.
+    # After each update print RMSE (root mean squared error, i.e.,
+    # sqrt(avg_i[(target_i-prediction_i)^2])) both on training and testing data.
     for iteration in range(args.iterations):
         # TODO
 
