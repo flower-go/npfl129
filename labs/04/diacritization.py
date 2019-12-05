@@ -5,6 +5,8 @@ import pickle
 import os
 import urllib.request
 import sys
+from sklearn import preprocessing
+from sklearn.neural_network import MLPClassifier
 
 import numpy as np
 
@@ -31,17 +33,70 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", default="diacritization.model", type=str, help="Model path")
 parser.add_argument("--seed", default=42, type=int, help="Random seed")
 
+def create_tuples(text, n):
+
+    text = padding(text, n)
+    n = n*2 + 1
+    return ["".join(a) for a in zip(*[text[i:] for i in range(n)])]
+
+def padding(text, n):
+    start  = n
+    end = n
+    return [" "]*n + text + [" "]*n
+
+def convert_to_numbers(x):
+    carka = "áéíóúý"
+    krouzek="ů"
+    hacek = "čďěňřšťž"
+    if x in carka:
+        return 0
+    elif x in krouzek:
+        return 1
+    elif x in hacek:
+        return 2
+    else:
+        return 3
+
+def transform_data(train):
+
+
+
 if __name__ == "__main__":
     args = parser.parse_args()
 
     # Set random seed
     np.random.seed(args.seed)
 
+
     # Load the dataset, downloading it if required
     train = Dataset()
+    chars_orig= list(train.data)
+    labels_orig = chars_orig
+
+
+    mask = [True if i in train.LETTERS_NODIA or i in train.LETTERS_DIA else False for i in labels_orig]
+    chars = list(np.array(chars_orig)[mask])
+    labels = list(np.array(labels_orig)[mask])
+
+
+    tuples_3 = create_tuples(chars,1)
+    tuples_4 = create_tuples(chars,2)
+
+    data_t = np.array([chars,tuples_3, tuples_4]).T
+
+    enc = preprocessing.OneHotEncoder()
+
+    # 2. FIT
+    enc.fit(data_t)
+
+    # 3. Transform
+    onehotlabels = enc.transform(data_t)
+
+    labels_t = [convert_to_numbers(x) for x in labels]
 
     # TODO: Train the model.
-
+    model = MLPClassifier(activation='relu')
+    model.fit(onehotlabels,labels_t)
     # TODO: The trained model needs to be saved. All sklearn models can
     # be serialized and deserialized using the standard `pickle` module.
     # Additionally, we also compress the model.
@@ -66,6 +121,8 @@ def recodex_predict(data):
     # model from the stored binary data:
     with lzma.open(args.model_path, "rb") as model_file:
         model = pickle.load(model_file)
+
+
 
     # TODO: Return the predictions as a diacritized `str`. It has to have
     # exactly the same length as `data` and all corresponding characters
