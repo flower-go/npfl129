@@ -78,6 +78,10 @@ if __name__ == "__main__":
 
         # TODO: After each iteration, measure the accuracy for both the
         # train test and the test set and print it in percentages.
+
+        train_accuracy = 0
+        test_accuracy = 0
+
         print("Train acc {:.1f}%, test acc {:.1f}%".format(
             100 * train_accuracy,
             100 * test_accuracy,
